@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   SearchHeadless,
   QuerySource,
@@ -14,6 +15,7 @@ import { useEntityPreviews } from '../hooks/useEntityPreviews';
 import { useRecentSearches } from '../hooks/useRecentSearches';
 import { useSearchWithNearMeHandling } from '../hooks/useSearchWithNearMeHandling';
 import { useSynchronizedRequest } from '../hooks/useSynchronizedRequest';
+import { useDebouncedFunction } from '../hooks/useDebouncedFunction';
 import { VerticalDividerIcon } from '../icons/VerticalDividerIcon';
 import { HistoryIcon as RecentSearchIcon } from '../icons/HistoryIcon';
 import { CloseIcon } from '../icons/CloseIcon';
@@ -26,7 +28,6 @@ import { DropdownMenu } from './Dropdown/DropdownMenu';
 import { FocusedItemData } from './Dropdown/FocusContext';
 import { useComposedCssClasses, twMerge } from '../hooks/useComposedCssClasses';
 import { SearchButton } from './SearchButton';
-import { processTranslation } from './utils/processTranslation';
 import {
   renderAutocompleteResult,
   AutocompleteResultCssClasses,
@@ -171,6 +172,7 @@ export function SearchBar({
   customCssClasses,
   onSearch
 }: SearchBarProps): JSX.Element {
+  const { t } = useTranslation();
   const {
     entityPreviewSearcher,
     renderEntityPreviews,
@@ -186,8 +188,13 @@ export function SearchBar({
   const cssClasses = useComposedCssClasses(builtInCssClasses, customCssClasses);
   const isVertical = useSearchState(state => state.meta.searchType) === SearchTypeEnum.Vertical;
   const verticalKey = useSearchState(state => state.vertical.verticalKey);
+  const debouncedExecuteAutocompleteSearch = useDebouncedFunction( () => executeAutocompleteSearch(searchActions), 200);
   const [autocompleteResponse, executeAutocomplete, clearAutocompleteData] = useSynchronizedRequest(
-    () => executeAutocompleteSearch(searchActions)
+    async () => {
+      return debouncedExecuteAutocompleteSearch ?
+        debouncedExecuteAutocompleteSearch() :
+        undefined;
+    }
   );
   const [
     executeQueryWithNearMeHandling,
@@ -272,7 +279,7 @@ export function SearchBar({
 
   const handleClickClearButton = useCallback(() => {
     updateEntityPreviews('');
-    handleSubmit('');
+    searchActions.setQuery('');
     reportAnalyticsEvent('SEARCH_CLEAR_BUTTON');
   }, [handleSubmit, reportAnalyticsEvent, updateEntityPreviews]);
 
@@ -284,7 +291,7 @@ export function SearchBar({
         onSubmit={handleSubmit}
         onFocus={handleInputFocus}
         onChange={handleInputChange}
-        ariaLabel='Conduct a search'
+        ariaLabel={t('conductASearch')}
       />
     );
   }
@@ -308,7 +315,9 @@ export function SearchBar({
           { value: result.query, inputIntents: [] },
           recentSearchesCssClasses,
           RecentSearchIcon,
-          `recent search: ${result.query}`
+          t('recentSearch', {
+            query: result.query
+          })
         )}
       </DropdownItem>
     ));
@@ -335,7 +344,7 @@ export function SearchBar({
             result,
             cssClasses,
             MagnifyingGlassIcon,
-            `autocomplete suggestion: ${result.value}`
+            t('autocompleteSuggestion', { suggestion: result.value })
           )}
         </DropdownItem>
         {showVerticalLinks && !isVertical && result.verticalKeys?.map((verticalKey, j) => (
@@ -364,7 +373,7 @@ export function SearchBar({
     return (
       <>
         <button
-          aria-label='Clear the search bar'
+          aria-label={t('clearTheSearchBar')}
           className={cssClasses.clearButton}
           onClick={handleClickClearButton}
         >
@@ -386,7 +395,7 @@ export function SearchBar({
     entityPreviewsCount
   );
   const activeClassName = classNames('relative z-10 bg-white border rounded-3xl border-gray-200 w-full overflow-hidden', {
-    ['shadow-lg' ?? '']: hasItems
+    ['shadow-lg']: hasItems
   });
 
   const handleToggleDropdown = useCallback((isActive) => {
@@ -445,35 +454,21 @@ function getScreenReaderText(
   recentSearchesOptions = 0,
   entityPreviewsCount = 0
 ): string {
-  const recentSearchesText = recentSearchesOptions > 0
-    ? processTranslation({
-      phrase: `${recentSearchesOptions} recent search found.`,
-      pluralForm: `${recentSearchesOptions} recent searches found.`,
-      count: recentSearchesOptions
-    })
-    : '';
-  const entityPreviewsText = entityPreviewsCount > 0
-    ? ' ' + processTranslation({
-      phrase: `${entityPreviewsCount} result preview found.`,
-      pluralForm: `${entityPreviewsCount} result previews found.`,
-      count: entityPreviewsCount
-    })
-    : '';
-  const autocompleteText = autocompleteOptions > 0
-    ? ' ' + processTranslation({
-      phrase: `${autocompleteOptions} autocomplete suggestion found.`,
-      pluralForm: `${autocompleteOptions} autocomplete suggestions found.`,
-      count: autocompleteOptions
-    })
-    : '';
+  const { t } = useTranslation();
+  let texts: string[] = [];
+  recentSearchesOptions > 0 && texts.push(t('recentSearchesFound', {
+    count: recentSearchesOptions
+  }));
+  entityPreviewsCount > 0  && texts.push(t('resultPreviewsFound', {
+    count: entityPreviewsCount
+  }));
+  autocompleteOptions > 0 && texts.push(t('autocompleteSuggestionsFound', {
+    count: autocompleteOptions
+  }));
 
-  const text = recentSearchesText + autocompleteText + entityPreviewsText;
+  const text = texts.join(' ');
   if (text === '') {
-    return processTranslation({
-      phrase: '0 autocomplete suggestion found.',
-      pluralForm: '0 autocomplete suggestions found.',
-      count: 0
-    });
+    return t('noAutocompleteSuggestionsFound')
   }
   return text.trim();
 }
@@ -501,7 +496,8 @@ function DropdownSearchButton({ handleSubmit, cssClasses }: {
 }
 
 function getAriaLabel(value: string): string {
-  return 'result preview: ' + value;
+  const { t } = useTranslation();
+  return t('resultPreview', { value })
 }
 
 /**

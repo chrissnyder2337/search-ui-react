@@ -9,15 +9,42 @@ A React Component which collects location information to create a location filte
 **Signature:**
 
 ```typescript
-declare function Geolocation({ geolocationOptions, radius, label, GeolocationIcon, handleClick, customCssClasses, }: GeolocationProps): JSX.Element | null;
+declare function Geolocation({ geolocationOptions, radius, label, GeolocationIcon, handleClick, customCssClasses, useIconAsButton, disableBuiltInClasses }: GeolocationProps): JSX.Element | null;
 ```
 
 ## Parameters
 
-|  Parameter | Type | Description |
-|  --- | --- | --- |
-|  { geolocationOptions, radius, label, GeolocationIcon, handleClick, customCssClasses, } | [GeolocationProps](./search-ui-react.geolocationprops.md) |  |
+<table><thead><tr><th>
 
+Parameter
+
+
+</th><th>
+
+Type
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+{ geolocationOptions, radius, label, GeolocationIcon, handleClick, customCssClasses, useIconAsButton, disableBuiltInClasses }
+
+
+</td><td>
+
+[GeolocationProps](./search-ui-react.geolocationprops.md)
+
+
+</td><td>
+
+
+</td></tr>
+</tbody></table>
 **Returns:**
 
 JSX.Element \| null

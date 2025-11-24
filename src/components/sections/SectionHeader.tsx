@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { AppliedFiltersCssClasses } from '../AppliedFilters';
 import { AppliedFiltersDisplay } from '../AppliedFiltersDisplay';
 import { CollectionIcon } from '../../icons/CollectionIcon';
@@ -59,6 +60,7 @@ export interface SectionHeaderProps {
  * @returns A React element for a Section Header
  */
 export function SectionHeader(props: SectionHeaderProps): JSX.Element {
+  const { t } = useTranslation();
   const {
     label,
     verticalKey,
@@ -108,10 +110,8 @@ export function SectionHeader(props: SectionHeaderProps): JSX.Element {
       }
       {viewAllButton &&
         <div className={cssClasses.viewMoreContainer}>
-          <a className={cssClasses.viewMoreLink} href={href}>
-            <button onClick={handleClickViewAllButton}>
-              View all
-            </button>
+          <a className={cssClasses.viewMoreLink} href={href} onClick={handleClickViewAllButton}>
+            {t('viewAll')}
           </a>
         </div>}
     </div>

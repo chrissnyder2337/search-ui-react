@@ -98,8 +98,25 @@ const newGeoPosition: GeolocationPosition = {
     latitude: 40.741591687843005,
     longitude: -74.00530254443494,
     speed: null,
+    toJSON: function () {
+      return {
+        accuracy: this.accuracy,
+        altitude: this.altitude,
+        altitudeAccuracy: this.altitudeAccuracy,
+        heading: this.heading,
+        latitude: this.latitude,
+        longitude: this.longitude,
+        speed: this.speed,
+      };
+    },
   },
-  timestamp: 0
+  timestamp: 0,
+  toJSON: function () {
+    return {
+      coords: this.coords.toJSON(),
+      timestamp: this.timestamp,
+    };
+  }
 };
 
 const newGeoPositionWithLowAccuracy: GeolocationPosition = {
@@ -107,7 +124,13 @@ const newGeoPositionWithLowAccuracy: GeolocationPosition = {
     ...newGeoPosition.coords,
     accuracy: 100000,
   },
-  timestamp: 0
+  timestamp: 0,
+  toJSON: function () {
+    return {
+      coords: this.coords.toJSON(),
+      timestamp: this.timestamp,
+    };
+  }
 };
 
 beforeEach(() => {
@@ -132,6 +155,13 @@ it('renders custom icon when provided', () => {
   render(<Geolocation GeolocationIcon={() => <img src="graphic1.png" alt="Custom Icon" />} />);
   const LocationIcon = screen.getByAltText('Custom Icon');
   expect(LocationIcon).toBeDefined();
+});
+
+it('uses icon as button when useIconAsButton is true', () => {
+  render(<Geolocation useIconAsButton={true} />);
+  const updateLocationButton = screen.getByRole('button', { name: 'Use Current Location' });
+  expect(updateLocationButton).toBeDefined();
+  expect(screen.queryByText('Use my location')).not.toBeInTheDocument();
 });
 
 describe('custom click handler', () => {

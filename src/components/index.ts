@@ -175,3 +175,17 @@ export {
 
 export * from './sections/index';
 export * from './AnalyticsProvider';
+
+export {
+  GenerativeDirectAnswer,
+  GenerativeDirectAnswerCssClasses,
+  GenerativeDirectAnswerProps,
+  CitationProps,
+  CitationsProps,
+  GdaClickEventData
+} from './GenerativeDirectAnswer';
+
+export {
+  SearchTranslationOverrides,
+  SearchI18nextProvider,
+} from './SearchI18nextProvider';

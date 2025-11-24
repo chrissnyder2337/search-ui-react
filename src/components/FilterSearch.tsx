@@ -1,14 +1,17 @@
+import { useTranslation } from 'react-i18next';
 import { AutocompleteResult, FieldValueStaticFilter, FilterSearchResponse, SearchParameterField, SelectableStaticFilter, StaticFilter, useSearchActions, useSearchState } from '@yext/search-headless-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useComposedCssClasses } from '../hooks';
 import { useSynchronizedRequest } from '../hooks/useSynchronizedRequest';
+import { useDebouncedFunction } from '../hooks/useDebouncedFunction';
 import { executeSearch } from '../utils';
 import { isDuplicateStaticFilter } from '../utils/filterutils';
 import { Dropdown } from './Dropdown/Dropdown';
 import { DropdownInput } from './Dropdown/DropdownInput';
 import { DropdownItem } from './Dropdown/DropdownItem';
 import { DropdownMenu } from './Dropdown/DropdownMenu';
-import { processTranslation } from './utils/processTranslation';
+import { Geolocation, GeolocationProps } from './Geolocation';
+import { CurrentLocationIcon } from '../icons/CurrentLocationIcon';
 import { renderAutocompleteResult, AutocompleteResultCssClasses } from './utils/renderAutocompleteResult';
 
 /**
@@ -22,7 +25,9 @@ export interface FilterSearchCssClasses extends AutocompleteResultCssClasses {
   inputElement?: string,
   sectionLabel?: string,
   focusedOption?: string,
-  optionsContainer?: string
+  optionsContainer?: string,
+  currentLocationButton?: string,
+  currentLocationAndInputContainer?: string
 }
 
 const builtInCssClasses: Readonly<FilterSearchCssClasses> = {
@@ -31,7 +36,9 @@ const builtInCssClasses: Readonly<FilterSearchCssClasses> = {
   inputElement: 'text-sm bg-white outline-none h-9 w-full p-2 rounded-md border border-gray-300 focus:border-primary text-neutral-dark placeholder:text-neutral',
   sectionLabel: 'text-sm text-neutral-dark font-semibold py-2 px-4',
   focusedOption: 'bg-gray-100',
-  option: 'text-sm text-neutral-dark py-1 cursor-pointer hover:bg-gray-100 px-4'
+  option: 'text-sm text-neutral-dark py-1 cursor-pointer hover:bg-gray-100 px-4',
+  currentLocationButton: 'h-5 w-5',
+  currentLocationAndInputContainer: 'w-full flex items-center justify-start gap-2'
 };
 
 /**
@@ -112,7 +119,13 @@ export interface FilterSearchProps {
   /** CSS classes for customizing the component styling. */
   customCssClasses?: FilterSearchCssClasses,
   /** Whether to disable the default CSS classes entirely  */
-  disableBuiltInClasses?: boolean
+  disableBuiltInClasses?: boolean,
+  /** The accessible label for the dropdown input. */
+  ariaLabel?: string
+  /** Whether to include a button to search on the user's location. Defaults to false. */
+  showCurrentLocationButton?: boolean;
+  /** The props for the geolocation component, if the current location button is enabled. */
+  geolocationProps?: GeolocationProps;
 }
 
 /**
@@ -126,15 +139,19 @@ export interface FilterSearchProps {
 export function FilterSearch({
   searchFields,
   label,
-  placeholder = 'Search here...',
+  placeholder,
   searchOnSelect,
   onSelect,
   onDropdownInputChange,
   afterDropdownInputFocus,
   sectioned = false,
   customCssClasses,
-  disableBuiltInClasses = false
+  disableBuiltInClasses = false,
+  ariaLabel,
+  showCurrentLocationButton = false,
+  geolocationProps = {}
 }: FilterSearchProps): JSX.Element {
+  const { t } = useTranslation();
   const searchActions = useSearchActions();
   const searchParamFields = searchFields.map((searchField) => {
     return { ...searchField, fetchEntities: false };
@@ -159,16 +176,23 @@ export function FilterSearch({
     ) ?? [];
   }, [staticFilters, matchingFieldIds]);
 
+  const debouncedExecuteFilterSearch = useDebouncedFunction(
+    (query: string) => searchActions.executeFilterSearch(query, sectioned, searchParamFields),
+    200
+  );
+
   const [
     filterSearchResponse,
     executeFilterSearch,
     clearFilterSearchResponse
   ] = useSynchronizedRequest<string, FilterSearchResponse>(
-    inputValue => {
+    async (inputValue) => {
       setFilterQuery(inputValue);
-      return searchActions.executeFilterSearch(inputValue ?? '', sectioned, searchParamFields);
+      return debouncedExecuteFilterSearch
+        ? debouncedExecuteFilterSearch(inputValue ?? '')
+        : undefined;
     },
-    (e) => console.error('Error occured executing a filter search request.\n', e)
+    (e) => console.error('Error occurred executing a filter search request.\n', e)
   );
 
   useEffect(() => {
@@ -209,7 +233,7 @@ export function FilterSearch({
 
   const hasResults = sections.flatMap(s => s.results).length > 0;
 
-  const handleSelectDropdown = useCallback((_value, _index, itemData) => {
+  const handleSelectDropdown = useCallback(async (_value, _index, itemData) => {
     const newFilter = itemData?.filter as FieldValueStaticFilter;
     const newDisplayName = itemData?.displayName as string;
     if (!newFilter || !newDisplayName) {
@@ -313,6 +337,27 @@ export function FilterSearch({
     afterDropdownInputFocus?.({value});
   }, [afterDropdownInputFocus, executeFilterSearch]);
 
+  const dropdownInput = (
+    <DropdownInput
+      className={cssClasses.inputElement}
+      placeholder={placeholder ?? t('searchHere')}
+      onChange={handleInputChange}
+      onFocus={handleInputFocus}
+      submitCriteria={meetsSubmitCritera}
+      ariaLabel={ariaLabel}
+    />
+  );
+
+  const dropdownMenu = (
+    <DropdownMenu>
+      {hasResults &&
+        <div className='absolute z-10 w-full shadow-lg rounded-md border border-gray-300 bg-white pt-3 pb-1 mt-1'>
+          {renderDropdownItems()}
+        </div>
+      }
+    </DropdownMenu>
+  )
+
   return (
     <div className={cssClasses.filterSearchContainer}>
       {label && <h1 className={cssClasses.label}>{label}</h1>}
@@ -322,20 +367,28 @@ export function FilterSearch({
         alwaysSelectOption={true}
         parentQuery={filterQuery}
       >
-        <DropdownInput
-          className={cssClasses.inputElement}
-          placeholder={placeholder}
-          onChange={handleInputChange}
-          onFocus={handleInputFocus}
-          submitCriteria={meetsSubmitCritera}
-        />
-        <DropdownMenu>
-          {hasResults &&
-            <div className='absolute z-10 w-full shadow-lg rounded-md border border-gray-300 bg-white pt-3 pb-1 mt-1'>
-              {renderDropdownItems()}
+        {showCurrentLocationButton ? (
+          <div className={cssClasses.currentLocationAndInputContainer}>
+            <div className='relative flex-1'>
+              {dropdownInput}
+              {dropdownMenu}
             </div>
-          }
-        </DropdownMenu>
+            <Geolocation
+              GeolocationIcon={CurrentLocationIcon}
+              customCssClasses={{
+                button: cssClasses.currentLocationButton,
+                iconContainer: 'w-full h-full ml-0'
+              }}
+              useIconAsButton={true}
+              {...geolocationProps}
+            />
+          </div>
+        ) : (
+          <>
+            {dropdownInput}
+            {dropdownMenu}
+          </>
+        )}
       </Dropdown>
     </div>
   );
@@ -345,24 +398,17 @@ function getScreenReaderText(sections: {
   results: AutocompleteResult[],
   label?: string
 }[]) {
-  let screenReaderText = processTranslation({
-    phrase: '0 autocomplete option found.',
-    pluralForm: '0 autocomplete options found.',
-    count: 0
-  });
+  const { t } = useTranslation();
   if (sections.length === 0) {
-    return screenReaderText;
+    return t('noAutocompleteOptionsFound');
   }
   const screenReaderPhrases = sections.map(section => {
-    const optionInfo = section.label
-      ? `${section.results.length} ${section.label}`
-      : `${section.results.length}`;
-    return processTranslation({
-      phrase: `${optionInfo} autocomplete option found.`,
-      pluralForm: `${optionInfo} autocomplete options found.`,
-      count: section.results.length
-    });
+    const label = section.label ? ` ${section.label}` : '';
+    const count = section.results.length;
+    return t('autocompleteOptionsFound', {
+      count,
+      label,
+    })
   });
-  screenReaderText = screenReaderPhrases.join(' ');
-  return screenReaderText;
+  return screenReaderPhrases.join(' ');
 }

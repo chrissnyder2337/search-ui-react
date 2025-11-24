@@ -1,8 +1,17 @@
-import { SearchIntent, QuerySource, SearchCore, SearchHeadlessContext, State } from '@yext/search-headless-react';
-import { render, screen } from '@testing-library/react';
-import { SearchBar } from '../../src/components/SearchBar';
+import {
+  SearchIntent,
+  QuerySource,
+  SearchCore,
+  SearchHeadlessContext,
+  State
+} from '@yext/search-headless-react';
+import { render, RenderResult, screen } from '@testing-library/react';
+import { SearchBar, onSearchFunc } from '../../src/components/SearchBar';
+import { VerticalLink } from '../../src/models/verticalLink';
+import { SearchI18nextProvider } from '../../src/components/SearchI18nextProvider';
 import userEvent from '@testing-library/user-event';
 import { generateMockedHeadless } from '../__fixtures__/search-headless';
+import { RecursivePartial } from '../__utils__/mocks';
 import * as Analytics from '../../src/hooks/useAnalytics';
 import { SearchAnalyticsService } from '@yext/analytics';
 import React from 'react';
@@ -24,6 +33,35 @@ const mockedState: Partial<State> = {
   location: {}
 };
 
+const pause = (millis: number) => new Promise(resolve => setTimeout(resolve, millis));
+// wait for debounce period + extra buffer to address flakiness
+const waitForDebounce = () => pause(200 + 200);
+
+function renderSearchBar(
+  mockState: RecursivePartial<State>,
+  showVerticalLinks?: boolean,
+  onSelectVerticalLink?: (data: { verticalLink: VerticalLink, querySource: QuerySource }) => void,
+  verticalKeyToLabel?: (verticalKey: string) => string,
+  hideRecentSearches?: boolean,
+  recentSearchesLimit?: number,
+  onSearch?: onSearchFunc
+): RenderResult {
+  const searcher = generateMockedHeadless(mockState);
+
+  return render(<SearchHeadlessContext.Provider value={searcher}>
+    <SearchI18nextProvider searcher={searcher}>
+      <SearchBar 
+        showVerticalLinks={showVerticalLinks}
+        onSelectVerticalLink={onSelectVerticalLink}
+        verticalKeyToLabel={verticalKeyToLabel}
+        hideRecentSearches={hideRecentSearches}
+        recentSearchesLimit={recentSearchesLimit}
+        onSearch={onSearch}
+      />
+    </SearchI18nextProvider>
+  </SearchHeadlessContext.Provider>);
+}
+
 describe('SearchBar', () => {
   describe('query suggestions', () => {
     const mockedAutocompleteResult = {
@@ -40,11 +78,7 @@ describe('SearchBar', () => {
         .spyOn(SearchCore.prototype, 'universalAutocomplete')
         .mockResolvedValue(mockedAutocompleteResult);
 
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar hideRecentSearches={true}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
 
       expect(screen.queryByText('query suggestion 1')).not.toBeInTheDocument();
       expect(screen.queryByText('query suggestion 2')).not.toBeInTheDocument();
@@ -58,9 +92,8 @@ describe('SearchBar', () => {
       const mockedVerticalAutocomplete = jest
         .spyOn(SearchCore.prototype, 'verticalAutocomplete')
         .mockResolvedValue(mockedAutocompleteResult);
-
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless({
+      
+      renderSearchBar({
           ...mockedState,
           vertical: {
             verticalKey: 'someKey'
@@ -68,9 +101,11 @@ describe('SearchBar', () => {
           meta: {
             searchType: 'vertical'
           }
-        })}>
-          <SearchBar hideRecentSearches={true}/>
-        </SearchHeadlessContext.Provider>
+        },
+        undefined,
+        undefined,
+        undefined,
+        true
       );
 
       expect(screen.queryByText('query suggestion 1')).not.toBeInTheDocument();
@@ -78,7 +113,7 @@ describe('SearchBar', () => {
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion 1')).toBeInTheDocument();
       expect(await screen.findByText('query suggestion 2')).toBeInTheDocument();
-      expect(mockedVerticalAutocomplete).toBeCalledTimes(1);
+      expect(mockedVerticalAutocomplete).toHaveBeenCalledTimes(1);
     });
 
     it('updates query suggestions with new autocomplete results when type in search bar', async () => {
@@ -97,18 +132,14 @@ describe('SearchBar', () => {
         .mockResolvedValueOnce(mockedUniversalAutocompleteResultOne)
         .mockResolvedValueOnce(mockedUniversalAutocompleteResultTwo);
 
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar hideRecentSearches={true}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, undefined, undefined, undefined, true);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion 1')).toBeInTheDocument();
       expect(screen.queryByText('query suggestion 2')).not.toBeInTheDocument();
       await userEvent.type(screen.getByRole('textbox'), 't');
       expect(await screen.findByText('query suggestion 2')).toBeInTheDocument();
       expect(screen.queryByText('query suggestion 1')).not.toBeInTheDocument();
-      expect(mockedUniversalAutocomplete).toBeCalledTimes(2);
+      expect(mockedUniversalAutocomplete).toHaveBeenCalledTimes(2);
     });
 
     it('executes a new search when a query suggestion option is selected', async () => {
@@ -117,11 +148,7 @@ describe('SearchBar', () => {
 
       const mockedUniversalSearch = jest.spyOn(SearchCore.prototype, 'universalSearch');
 
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar hideRecentSearches={true}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, undefined, undefined, undefined, true);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion 1')).toBeInTheDocument();
       await userEvent.keyboard('{arrowdown}');
@@ -151,11 +178,7 @@ describe('SearchBar', () => {
     });
 
     it('displays vertical links as part of the query suggestions when showVerticalLinks is set to true', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar showVerticalLinks={true}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, true);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion')).toBeInTheDocument();
       expect(await screen.findByText('in verticalKey1')).toBeInTheDocument();
@@ -163,11 +186,7 @@ describe('SearchBar', () => {
     });
 
     it('does not display vertical links on default', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion')).toBeInTheDocument();
       expect(screen.queryByText('in verticalKey1')).not.toBeInTheDocument();
@@ -175,14 +194,10 @@ describe('SearchBar', () => {
     });
 
     it('vertical links use display labels from verticalKeyToLabel when it is specified', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar showVerticalLinks={true} verticalKeyToLabel={verticalKey => {
-            const verticalLabels = { verticalKey1: 'Vertical One', verticalKey2: 'Vertical Two' };
-            return verticalLabels[verticalKey];
-          }}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, true, undefined, verticalKey => {
+        const verticalLabels = { verticalKey1: 'Vertical One', verticalKey2: 'Vertical Two' };
+        return verticalLabels[verticalKey];
+      });
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion')).toBeInTheDocument();
       expect(await screen.findByText('in Vertical One')).toBeInTheDocument();
@@ -191,15 +206,11 @@ describe('SearchBar', () => {
 
     it('executes onSelectVerticalLink callback when a vertical link is selected', async () => {
       const mockedOnSelectVerticalLink = jest.fn();
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar showVerticalLinks={true} onSelectVerticalLink={mockedOnSelectVerticalLink}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, true, mockedOnSelectVerticalLink);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('in verticalKey1')).toBeInTheDocument();
       await userEvent.click(screen.getByText('in verticalKey1'));
-      expect(mockedOnSelectVerticalLink).toBeCalledTimes(1);
+      expect(mockedOnSelectVerticalLink).toHaveBeenCalledTimes(1);
       expect(mockedOnSelectVerticalLink).toHaveBeenCalledWith({
         verticalLink: {
           query: 'query suggestion',
@@ -212,11 +223,7 @@ describe('SearchBar', () => {
 
   describe('recent searches', () => {
     it('displays recent searches in dropdown after performing searches', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
       await userEvent.type(screen.getByRole('textbox'), 'yext');
       await userEvent.keyboard('{enter}');
       await userEvent.clear(screen.getByRole('textbox'));
@@ -228,11 +235,7 @@ describe('SearchBar', () => {
     });
 
     it('displays limited recent search results in dropdown based on recentSearchesLimit', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar recentSearchesLimit={1}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, undefined, undefined, undefined, undefined, 1);
       await userEvent.type(screen.getByRole('textbox'), 'yext');
       await userEvent.keyboard('{enter}');
       await userEvent.clear(screen.getByRole('textbox'));
@@ -245,11 +248,7 @@ describe('SearchBar', () => {
     });
 
     it('hides recent searches when hideRecentSearches is true', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar hideRecentSearches={true}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, undefined, undefined, undefined, true);
 
       await userEvent.type(screen.getByRole('textbox'), 'yext');
       await userEvent.keyboard('{enter}');
@@ -261,39 +260,30 @@ describe('SearchBar', () => {
   });
 
   it('submit button executes a new search', async () => {
-    render(
-      <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-        <SearchBar />
-      </SearchHeadlessContext.Provider>
-    );
+    renderSearchBar(mockedState);
     const mockedUniversalSearch = jest.spyOn(SearchCore.prototype, 'universalSearch');
     const submitSearchButton = screen.getByRole('button', { name: 'Submit Search' });
     await userEvent.click(submitSearchButton);
     expect(mockedUniversalSearch).toHaveBeenCalledTimes(1);
   });
 
-  it('clear button deletes text in input element', async () => {
-    render(
-      <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-        <SearchBar />
-      </SearchHeadlessContext.Provider>
-    );
+  it('clear button deletes text in input element, but does not search', async () => {
+    renderSearchBar(mockedState);
+    const mockedUniversalSearch = jest.spyOn(SearchCore.prototype, 'universalSearch');
     await userEvent.type(screen.getByRole('textbox'), 'yext');
     expect(await screen.findByRole('textbox')).toHaveDisplayValue('yext');
     const clearSearchButton = screen.getByRole('button', { name: 'Clear the search bar' });
     await userEvent.click(clearSearchButton);
     expect(await screen.findByRole('textbox')).toHaveDisplayValue('');
+    expect(mockedUniversalSearch).toHaveBeenCalledTimes(0);
   });
 
   it('executes onSearch callback when click on submit button', async () => {
     const mockedOnSearch = jest.fn();
-    render(
-      <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-        <SearchBar onSearch={mockedOnSearch}/>
-      </SearchHeadlessContext.Provider>
-    );
+    renderSearchBar(mockedState, undefined, undefined, undefined, undefined, undefined, mockedOnSearch);
     const mockedUniversalSearch = jest.spyOn(SearchCore.prototype, 'universalSearch');
     await userEvent.type(screen.getByRole('textbox'), 'yext');
+    await waitForDebounce(); // Submit button won't fire query until debounce period is over
     const submitSearchButton = screen.getByRole('button', { name: 'Submit Search' });
     await userEvent.click(submitSearchButton);
     expect(mockedOnSearch).toHaveBeenCalledTimes(1);
@@ -318,11 +308,7 @@ describe('SearchBar', () => {
         }
       };
       const mockedUniversalSearch = jest.spyOn(SearchCore.prototype, 'universalSearch');
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedStateWithUserLocation)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedStateWithUserLocation);
       const submitSearchButton = screen.getByRole('button', { name: 'Submit Search' });
       await userEvent.click(submitSearchButton);
       expect(mockedUniversalSearch)
@@ -349,11 +335,7 @@ describe('SearchBar', () => {
       Object.defineProperty(window.navigator, 'geolocation', {
         value: { getCurrentPosition: mockedGetCurrentPosition }
       });
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
       const submitSearchButton = screen.getByRole('button', { name: 'Submit Search' });
       await userEvent.click(submitSearchButton);
       expect(mockedUniversalSearch)
@@ -380,11 +362,7 @@ describe('SearchBar', () => {
       jest.spyOn(SearchCore.prototype, 'universalAutocomplete')
         .mockResolvedValue(mockedAutocompleteResult);
 
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar hideRecentSearches={true}/>
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState, undefined, undefined, undefined, true);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText('query suggestion')).toBeInTheDocument();
       await userEvent.keyboard('{arrowdown}');
@@ -405,11 +383,7 @@ describe('SearchBar', () => {
           input: 't'
         }
       };
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedStateWithResults)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedStateWithResults);
       const clearSearchButton = screen.getByRole('button', { name: 'Clear the search bar' });
       await userEvent.click(clearSearchButton);
       expect(await screen.findByRole('textbox')).toHaveDisplayValue('');
@@ -424,11 +398,7 @@ describe('SearchBar', () => {
 
   describe('Screen reader text', () => {
     it('search bar instruction text for screen reader is present in DOM', () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
       expect(screen.getByText(
         'When autocomplete results are available, use up and down arrows to review and enter to select.'
       )).toBeInTheDocument();
@@ -445,11 +415,7 @@ describe('SearchBar', () => {
       };
       jest.spyOn(SearchCore.prototype, 'universalAutocomplete')
         .mockResolvedValue(mockedAutocompleteResponse);
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
       await userEvent.click(screen.getByRole('textbox'));
       expect(await screen.findByText(
         '2 autocomplete suggestions found.'
@@ -457,11 +423,7 @@ describe('SearchBar', () => {
     });
 
     it('description text of number of available recent search options is present in DOM', async () => {
-      render(
-        <SearchHeadlessContext.Provider value={generateMockedHeadless(mockedState)}>
-          <SearchBar />
-        </SearchHeadlessContext.Provider>
-      );
+      renderSearchBar(mockedState);
       await userEvent.type(screen.getByRole('textbox'), 'yext');
       await userEvent.keyboard('{enter}');
       await userEvent.click(screen.getByRole('textbox'));

@@ -11,8 +11,11 @@ import { DirectAnswer as DirectAnswer_2 } from '@yext/search-headless-react';
 import { DisplayableFacetOption } from '@yext/search-headless-react';
 import { FieldValueStaticFilter } from '@yext/search-headless-react';
 import { FilterSearchResponse } from '@yext/search-headless-react';
+import { GenerativeDirectAnswerResponse } from '@yext/search-headless-react';
 import { HighlightedValue } from '@yext/search-headless-react';
+import * as i18next from 'i18next';
 import { default as mapboxgl_2 } from 'mapbox-gl';
+import { MarkerOptions } from 'mapbox-gl';
 import { Matcher } from '@yext/search-headless-react';
 import { NumberRangeValue } from '@yext/search-headless-react';
 import { PropsWithChildren } from 'react';
@@ -119,7 +122,7 @@ export interface AutocompleteResultCssClasses {
 }
 
 // @public
-export type CardAnalyticsDataType<T = DefaultRawDataType> = DirectAnswer_2 | Result<T>;
+export type CardAnalyticsDataType<T = DefaultRawDataType> = DirectAnswer_2 | Result<T> | GdaClickEventData;
 
 // @public
 export type CardAnalyticsType = CardCtaEventType | FeedbackType;
@@ -128,11 +131,31 @@ export type CardAnalyticsType = CardCtaEventType | FeedbackType;
 export type CardComponent<T = DefaultRawDataType> = (props: CardProps<T>) => JSX.Element;
 
 // @public
-export type CardCtaEventType = 'CTA_CLICK' | 'TITLE_CLICK';
+export type CardCtaEventType = 'CTA_CLICK' | 'TITLE_CLICK' | 'CITATION_CLICK' | 'DRIVING_DIRECTIONS' | 'VIEW_WEBSITE' | 'TAP_TO_CALL';
 
 // @public
 export interface CardProps<T = DefaultRawDataType> {
     result: Result<T>;
+}
+
+// @public
+export interface CitationProps {
+    // (undocumented)
+    citationClickHandler?: (data: GdaClickEventData) => void;
+    // (undocumented)
+    cssClasses: GenerativeDirectAnswerCssClasses;
+    // (undocumented)
+    searchResult: Result;
+}
+
+// @public
+export interface CitationsProps {
+    CitationCard?: (props: CitationProps) => JSX.Element | null;
+    citationClickHandler?: (data: GdaClickEventData) => void;
+    citationsHeader?: string | JSX.Element;
+    cssClasses: GenerativeDirectAnswerCssClasses;
+    gdaResponse: GenerativeDirectAnswerResponse;
+    searchResults: Result[];
 }
 
 // @public
@@ -199,6 +222,9 @@ export type DropdownItemProps = PropsWithChildren<{
 
 // @public
 export function executeAutocomplete(searchActions: SearchActions): Promise<AutocompleteResponse | undefined>;
+
+// @public
+export function executeGenerativeDirectAnswer(searchActions: SearchActions): Promise<GenerativeDirectAnswerResponse | undefined>;
 
 // @public
 export function executeSearch(searchActions: SearchActions): Promise<void>;
@@ -273,10 +299,14 @@ export interface FilterOptionConfig {
 }
 
 // @public
-export function FilterSearch({ searchFields, label, placeholder, searchOnSelect, onSelect, onDropdownInputChange, afterDropdownInputFocus, sectioned, customCssClasses, disableBuiltInClasses }: FilterSearchProps): JSX.Element;
+export function FilterSearch({ searchFields, label, placeholder, searchOnSelect, onSelect, onDropdownInputChange, afterDropdownInputFocus, sectioned, customCssClasses, disableBuiltInClasses, ariaLabel, showCurrentLocationButton, geolocationProps }: FilterSearchProps): JSX.Element;
 
 // @public
 export interface FilterSearchCssClasses extends AutocompleteResultCssClasses {
+    // (undocumented)
+    currentLocationAndInputContainer?: string;
+    // (undocumented)
+    currentLocationButton?: string;
     // (undocumented)
     filterSearchContainer?: string;
     // (undocumented)
@@ -294,8 +324,10 @@ export interface FilterSearchCssClasses extends AutocompleteResultCssClasses {
 // @public
 export interface FilterSearchProps {
     afterDropdownInputFocus?: (params: AfterDropdownInputFocusProps) => void;
+    ariaLabel?: string;
     customCssClasses?: FilterSearchCssClasses;
     disableBuiltInClasses?: boolean;
+    geolocationProps?: GeolocationProps;
     label?: string;
     onDropdownInputChange?: (params: OnDropdownInputChangeProps) => void;
     onSelect?: (params: OnSelectParams) => void;
@@ -304,13 +336,54 @@ export interface FilterSearchProps {
     // @deprecated
     searchOnSelect?: boolean;
     sectioned?: boolean;
+    showCurrentLocationButton?: boolean;
 }
 
 // @public
 export type FocusedItemData = Record<string, unknown>;
 
 // @public
-function Geolocation_2({ geolocationOptions, radius, label, GeolocationIcon, handleClick, customCssClasses, }: GeolocationProps): JSX.Element | null;
+export interface GdaClickEventData {
+    // (undocumented)
+    destinationUrl: string;
+    // (undocumented)
+    searchResult?: Result;
+}
+
+// @public
+export function GenerativeDirectAnswer({ customCssClasses, answerHeader, citationsHeader, CitationCard, CitationsContainer, }: GenerativeDirectAnswerProps): JSX.Element | null;
+
+// @public
+export interface GenerativeDirectAnswerCssClasses {
+    // (undocumented)
+    answerText?: string;
+    // (undocumented)
+    citation?: string;
+    // (undocumented)
+    citationsContainer?: string;
+    // (undocumented)
+    citationSnippet?: string;
+    // (undocumented)
+    citationTitle?: string;
+    // (undocumented)
+    container?: string;
+    // (undocumented)
+    divider?: string;
+    // (undocumented)
+    header?: string;
+}
+
+// @public
+export interface GenerativeDirectAnswerProps {
+    answerHeader?: string | JSX.Element;
+    CitationCard?: (props: CitationProps) => JSX.Element | null;
+    CitationsContainer?: (props: CitationsProps) => JSX.Element | null;
+    citationsHeader?: string | JSX.Element;
+    customCssClasses?: GenerativeDirectAnswerCssClasses;
+}
+
+// @public
+function Geolocation_2({ geolocationOptions, radius, label, GeolocationIcon, handleClick, customCssClasses, useIconAsButton, disableBuiltInClasses }: GeolocationProps): JSX.Element | null;
 export { Geolocation_2 as Geolocation }
 
 // @public
@@ -326,11 +399,13 @@ export interface GeolocationCssClasses {
 // @public
 export interface GeolocationProps {
     customCssClasses?: GeolocationCssClasses;
+    disableBuiltInClasses?: boolean;
     GeolocationIcon?: React_2.FunctionComponent;
     geolocationOptions?: PositionOptions;
     handleClick?: (position: GeolocationPosition) => void;
     label?: string;
     radius?: number;
+    useIconAsButton?: boolean;
 }
 
 // @public
@@ -398,6 +473,11 @@ export interface HighlightedValueCssClasses {
     nonHighlighted?: string;
 }
 
+// Warning: (ae-internal-missing-underscore) The name "i18nInstance" should be prefixed with an underscore because the declaration is marked as @internal
+//
+// @internal
+export const i18nInstance: i18next.i18n;
+
 // @public
 export function isCtaData(data: unknown): data is CtaData;
 
@@ -425,14 +505,18 @@ export interface LocationBiasProps {
 }
 
 // @public
-export function MapboxMap<T>({ mapboxAccessToken, mapboxOptions, PinComponent, renderPin, getCoordinate, onDrag }: MapboxMapProps<T>): JSX.Element;
+export function MapboxMap<T>({ mapboxAccessToken, mapboxOptions, PinComponent, renderPin, getCoordinate, onDrag, iframeWindow, allowUpdates, onPinClick, markerOptionsOverride, }: MapboxMapProps<T>): JSX.Element;
 
 // @public
 export interface MapboxMapProps<T> {
+    allowUpdates?: boolean;
     getCoordinate?: CoordinateGetter<T>;
+    iframeWindow?: Window;
     mapboxAccessToken: string;
     mapboxOptions?: Omit<mapboxgl_2.MapboxOptions, 'container'>;
+    markerOptionsOverride?: (selected: boolean) => MarkerOptions;
     onDrag?: OnDragHandler;
+    onPinClick?: (result: Result<T> | undefined) => void;
     PinComponent?: PinComponent<T>;
     renderPin?: (props: PinComponentProps<T> & {
         container: HTMLElement;
@@ -528,6 +612,7 @@ export type PinComponentProps<T> = {
     index: number;
     mapbox: mapboxgl_2.Map;
     result: Result<T>;
+    selected?: boolean;
 };
 
 // @public
@@ -648,6 +733,16 @@ export interface SearchBarProps {
     verticalKeyToLabel?: (verticalKey: string) => string;
     visualAutocompleteConfig?: VisualAutocompleteConfig;
 }
+
+// Warning: (ae-forgotten-export) The symbol "SearchI18nextConfig" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function SearchI18nextProvider(props: PropsWithChildren<SearchI18nextConfig>): JSX.Element;
+
+// @public
+export type SearchTranslationOverrides = {
+    [key: string]: translations;
+};
 
 // @public
 export type SectionComponent<T = DefaultRawDataType> = (props: SectionProps<T>) => JSX.Element | null;
@@ -784,7 +879,7 @@ export interface StandardSectionProps<T = DefaultRawDataType> extends SectionPro
 }
 
 // @public
-export type StaticFilterOptionConfig = Omit<FilterOptionConfig, 'matcher' | 'value'> & {
+export type StaticFilterOptionConfig = Omit<FilterOptionConfig, 'value'> & {
     value: string | number | boolean;
 };
 
@@ -913,6 +1008,7 @@ export interface VerticalResultsProps<T> {
     CardComponent: CardComponent<T>;
     customCssClasses?: VerticalResultsCssClasses;
     displayAllOnNoResults?: boolean;
+    setResultsRef?: (index: number) => ((result: HTMLDivElement) => void) | null;
 }
 
 // @public
@@ -923,6 +1019,10 @@ export interface VisualAutocompleteConfig {
     renderEntityPreviews: RenderEntityPreviews;
     universalLimit?: UniversalLimit;
 }
+
+// Warnings were encountered during analysis:
+//
+// dist/index.d.ts:1658:5 - (ae-forgotten-export) The symbol "translations" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
