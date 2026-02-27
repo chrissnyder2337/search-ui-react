@@ -1,5 +1,5 @@
 import { render, RenderResult, screen } from '@testing-library/react';
-import { FeaturedSnippetDirectAnswer as FeaturedSnippetDirectAnswerType, Source, DirectAnswer, SearchHeadlessContext } from '@yext/search-headless-react';
+import { FeaturedSnippetDirectAnswer as FeaturedSnippetDirectAnswerType, Source, SearchHeadlessContext } from '@yext/search-headless-react';
 import { FeaturedSnippetDirectAnswer } from '../../src/components/FeaturedSnippetDirectAnswer';
 import { SearchI18nextProvider } from '../../src/components/SearchI18nextProvider';
 import { featuredSnippetDAState } from '../__fixtures__/data/directanswers';
@@ -32,20 +32,23 @@ function renderFeaturedSnippetDirectAnswer(
 
   function rerenderWithLocale(newLocale?: string) {
     const newSearcher = generateMockedHeadless({
-    directAnswer: {
-      result
-    },
-    meta: {
-      locale: newLocale
-    }
-  });
+      directAnswer: {
+        result
+      },
+      meta: {
+        locale: newLocale
+      }
+    });
 
-    utils.rerender(<SearchHeadlessContext.Provider value={newSearcher}>
-      <SearchI18nextProvider searcher={newSearcher}>
-        <FeaturedSnippetDirectAnswer result={result} readMoreClickHandler={readMoreClickHandler} />
-      </SearchI18nextProvider>
-    </SearchHeadlessContext.Provider>);
+    utils.rerender(
+      <SearchHeadlessContext.Provider value={newSearcher}>
+        <SearchI18nextProvider searcher={newSearcher}>
+          <FeaturedSnippetDirectAnswer result={result} readMoreClickHandler={readMoreClickHandler} />
+        </SearchI18nextProvider>
+      </SearchHeadlessContext.Provider>
+    );
   }
+
 
   return {
     ...utils,
@@ -79,7 +82,7 @@ describe('FeaturedSnippet direct answer', () => {
 
   it('executes readMoreClickHandler when click on "Read more about" link', async () => {
     const readMoreClickHandler = jest.fn();
-    renderFeaturedSnippetDirectAnswer(featuredSnippetDAResult,readMoreClickHandler);
+    renderFeaturedSnippetDirectAnswer(featuredSnippetDAResult, readMoreClickHandler);
     ignoreLinkClickErrors();
     await userEvent.click(screen.getByRole('link', { name: '[relatedResult.name]' }));
     expect(readMoreClickHandler).toHaveBeenCalledTimes(1);

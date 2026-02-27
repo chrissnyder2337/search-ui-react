@@ -53,7 +53,7 @@ export function UniversalResults<T>({
   verticalConfigMap,
   showAppliedFilters,
   customCssClasses
-}: UniversalResultsProps<T>): JSX.Element | null {
+}: UniversalResultsProps<T>): React.JSX.Element | null {
   const cssClasses = useComposedCssClasses(builtInCssClasses, customCssClasses);
   const resultsFromAllVerticals = useSearchState(state => state?.universal?.verticals) || [];
   const isLoading = useSearchState(state => state.searchStatus.isLoading);
@@ -82,14 +82,14 @@ interface VerticalSectionsProps<T> extends UniversalResultsProps<T> {
  * Renders a list of {@link SectionComponent}s based on the given list of vertical results and
  * corresponding configs, including specifying which section template to use.
  */
-function renderVerticalSections<T>(props: VerticalSectionsProps<T>): JSX.Element {
+function renderVerticalSections<T>(props: VerticalSectionsProps<T>): React.JSX.Element {
   const { resultsFromAllVerticals, verticalConfigMap, cssClasses } = props;
   return <>
     {resultsFromAllVerticals
       .filter(verticalResults => verticalResults.results)
       .map(verticalResults => {
         const verticalKey = verticalResults.verticalKey;
-        const verticalConfig = verticalConfigMap[verticalKey] || {};
+        const verticalConfig = (verticalConfigMap as any)[verticalKey] || {};
 
         const label = verticalConfig.label ?? verticalKey;
         const results = verticalResults.results;

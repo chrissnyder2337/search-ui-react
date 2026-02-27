@@ -1,13 +1,13 @@
 import { FacetsProvider } from './Filters';
 import { StandardFacetContent } from './StandardFacetContent';
 import {
-  FacetProps,
+  FacetProps, FacetsCssClasses,
   FacetsProps, HierarchicalFacetProps, NumericalFacetProps,
   StandardFacetProps
 } from './FacetProps';
 import { isNumericalFacet, isStringFacet } from '../utils/filterutils';
 import { FilterDivider } from './FilterDivider';
-import React, { Fragment, ReactElement } from 'react';
+import React, { Fragment, ReactElement, useMemo } from 'react';
 import { NumericalFacetContent } from './NumericalFacetContent';
 import { HierarchicalFacetContent } from './HierarchicalFacetContent';
 import { DisplayableFacet } from '@yext/search-headless-react';
@@ -32,7 +32,7 @@ enum FacetType {
  *
  * @public
  */
-export function Facets(props: FacetsProps): JSX.Element {
+export function Facets(props: FacetsProps): React.JSX.Element {
   const {
     searchOnChange,
     onlyRenderChildren = false,
@@ -41,12 +41,14 @@ export function Facets(props: FacetsProps): JSX.Element {
     excludedFieldIds = [],
     customCssClasses = {},
   } = props;
+  const resolvedHierarchicalFieldIds = useMemo(() => hierarchicalFieldIds ?? [], [hierarchicalFieldIds]);
 
   const fieldIdToCustomFacetProps = new Map();
   const fieldIds: string[] = [];
   if (children) {
     (Array.isArray(children) ? children : [children])
-      .filter(child => child?.props?.fieldId)
+      .filter((child): child is ReactElement<FacetProps> =>
+        React.isValidElement<FacetProps>(child) && !!child?.props?.fieldId)
       .forEach(child => {
         fieldIdToCustomFacetProps.set(child.props.fieldId, child);
         fieldIds.push(child.props.fieldId);
@@ -57,7 +59,7 @@ export function Facets(props: FacetsProps): JSX.Element {
     <div>
       <FacetsProvider searchOnChange={searchOnChange} className={customCssClasses.facetsContainer}>
         {facets => {
-          if (!facets || !facets.length) {
+          if (!facets?.length) {
             return;
           }
 
@@ -86,7 +88,7 @@ export function Facets(props: FacetsProps): JSX.Element {
                     facet={facet}
                     facetsCustomCssClasses={customCssClasses}
                     fieldIdToCustomFacetProps={fieldIdToCustomFacetProps}
-                    hierarchicalFieldIds={hierarchicalFieldIds}
+                    hierarchicalFieldIds={resolvedHierarchicalFieldIds}
                   />
                   {(i < facets.length - 1)
                     && <FilterDivider className={customCssClasses?.divider}/>}
@@ -147,14 +149,19 @@ export function Facet({
   facetsCustomCssClasses,
   fieldIdToCustomFacetProps,
   hierarchicalFieldIds,
+}: {
+  facet: DisplayableFacet,
+  facetsCustomCssClasses: FacetsCssClasses,
+  fieldIdToCustomFacetProps: Map<string, any>,
+  hierarchicalFieldIds: string[]
 }) {
   let facetType: FacetType;
   let facetProps: FacetProps = {
     fieldId: facet.fieldId,
     label: facet.displayName,
   };
-  if (fieldIdToCustomFacetProps.has(facet.fieldId)) {
-    const customFacetElement: ReactElement = fieldIdToCustomFacetProps.get(facet.fieldId);
+  const customFacetElement = fieldIdToCustomFacetProps.get(facet.fieldId);
+  if (customFacetElement) {
     facetProps = { ...facetProps, ...customFacetElement.props };
     facetType = getFacetTypeFromReactElementType(
       (typeof customFacetElement.type === 'function')

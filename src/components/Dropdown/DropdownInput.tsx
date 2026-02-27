@@ -10,16 +10,22 @@ import { useInputContext } from './InputContext';
 export function DropdownInput(props: {
   className?: string,
   placeholder?: string,
+  inputId?: string,
   ariaLabel?: string,
+  ariaLabelledBy?: string,
+  ariaDescribedBy?: string,
   onSubmit?: (value: string, index: number, focusedItemData: FocusedItemData | undefined ) => void,
   onFocus?: (value: string) => void,
   onChange?: (value: string) => void,
   submitCriteria?: (index: number) => boolean
-}): JSX.Element {
+}): React.JSX.Element {
   const {
     className,
     placeholder,
+    inputId,
     ariaLabel,
+    ariaLabelledBy,
+    ariaDescribedBy,
     onSubmit,
     onFocus,
     onChange,
@@ -27,7 +33,7 @@ export function DropdownInput(props: {
   } = props;
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const { toggleDropdown, onSelect, screenReaderUUID } = useDropdownContext();
+  const { toggleDropdown, onSelect, screenReaderUUID, dropdownListUUID, isActive } = useDropdownContext();
   const { value = '', setLastTypedOrSubmittedValue } = useInputContext();
   const {
     focusedIndex = -1,
@@ -36,6 +42,8 @@ export function DropdownInput(props: {
     updateFocusedItem
   } = useFocusContext();
   const [isTyping, setIsTyping] = useState<boolean>(true);
+  const describedBy = [screenReaderUUID, ariaDescribedBy].filter(Boolean).join(' ') || undefined;
+  const resolvedAriaLabel = ariaLabelledBy ? undefined : ariaLabel;
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setIsTyping(true);
@@ -86,11 +94,19 @@ export function DropdownInput(props: {
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
-      id={generateDropdownId(screenReaderUUID, -1)}
+      id={inputId ?? generateDropdownId(screenReaderUUID, -1)}
       autoComplete='off'
-      aria-describedby={screenReaderUUID}
-      aria-activedescendant={isTyping ? '' : generateDropdownId(screenReaderUUID, focusedIndex)}
-      aria-label={ariaLabel}
+      aria-describedby={describedBy}
+      aria-activedescendant={
+        !isTyping ? generateDropdownId(screenReaderUUID, focusedIndex) : undefined
+      }
+      aria-label={resolvedAriaLabel}
+      aria-labelledby={ariaLabelledBy}
+      aria-autocomplete="list"
+      role="combobox"
+      aria-controls={dropdownListUUID}
+      aria-expanded={isActive ? 'true' : 'false'}
+      aria-haspopup="listbox"
     />
   );
 }

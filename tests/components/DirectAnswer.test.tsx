@@ -28,7 +28,9 @@ function renderDirectAnswer(
       queryId: '[queryId]'
     },
     meta: {
-      locale
+      experienceKey: 'experienceKey',
+      locale,
+      uuid: 'searchId'
     }
   });
 
@@ -46,15 +48,19 @@ function renderDirectAnswer(
         queryId: '[queryId]'
       },
       meta: {
-        locale: newLocale
+        experienceKey: 'experienceKey',
+        locale: newLocale,
+        uuid: 'searchId'
       }
     });
 
-    utils.rerender(<SearchHeadlessContext.Provider value={newSearcher}>
-      <SearchI18nextProvider searcher={newSearcher} translationOverrides={translationOverrides}>
-        <DirectAnswer />
-      </SearchI18nextProvider>
-    </SearchHeadlessContext.Provider>);
+    utils.rerender(
+      <SearchHeadlessContext.Provider value={newSearcher}>
+        <SearchI18nextProvider searcher={newSearcher} translationOverrides={translationOverrides}>
+          <DirectAnswer />
+        </SearchI18nextProvider>
+      </SearchHeadlessContext.Provider>
+    );
   }
 
   return {
@@ -86,10 +92,16 @@ function runAnalyticsTestSuite(mockState: DirectAnswerState) {
     await userEvent.click(link);
     expect(useAnalytics()?.report).toHaveBeenCalledTimes(1);
     expect(useAnalytics()?.report).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'CTA_CLICK',
-      queryId: '[queryId]',
-      searcher: 'UNIVERSAL',
-      directAnswer: true
+      'action': 'CTA_CLICK',
+      'destinationUrl': '[relatedResult.link]',
+      'entity': '[relatedResult.id]',
+      'locale': undefined,
+      'experienceKey': 'experienceKey',
+      'isDirectAnswer': true,
+      'isGenerativeDirectAnswer': false,
+      'queryId': '[queryId]',
+      'searchId': 'searchId',
+      'verticalKey': ''
     }));
   });
 
@@ -99,10 +111,15 @@ function runAnalyticsTestSuite(mockState: DirectAnswerState) {
     await userEvent.click(thumbsUp);
     expect(useAnalytics()?.report).toHaveBeenCalledTimes(1);
     expect(useAnalytics()?.report).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'THUMBS_UP',
-      queryId: '[queryId]',
-      searcher: 'UNIVERSAL',
-      directAnswer: true
+      'action': 'THUMBS_UP',
+      'entity': '[relatedResult.id]',
+      'locale': undefined,
+      'experienceKey': 'experienceKey',
+      'isDirectAnswer': true,
+      'isGenerativeDirectAnswer': false,
+      'queryId': '[queryId]',
+      'searchId': 'searchId',
+      'verticalKey': ''
     }));
   });
 
@@ -112,10 +129,15 @@ function runAnalyticsTestSuite(mockState: DirectAnswerState) {
     await userEvent.click(thumbsDown);
     expect(useAnalytics()?.report).toHaveBeenCalledTimes(1);
     expect(useAnalytics()?.report).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'THUMBS_DOWN',
-      queryId: '[queryId]',
-      searcher: 'UNIVERSAL',
-      directAnswer: true
+      'action': 'THUMBS_DOWN',
+      'entity': '[relatedResult.id]',
+      'locale': undefined,
+      'experienceKey': 'experienceKey',
+      'isDirectAnswer': true,
+      'isGenerativeDirectAnswer': false,
+      'queryId': '[queryId]',
+      'searchId': 'searchId',
+      'verticalKey': ''
     }));
   });
 }
@@ -175,7 +197,8 @@ function runTranslationTestSuite(mockState: DirectAnswerState) {
     expect(screen.getByText('Overriden Feedback')).toBeDefined();
 
     const [thumbsUp, thumbsDown] = screen.queryAllByRole('button');
-    // Defaults to English translation because the overrides did not contain this key and the locale key is not supported
+    // Defaults to English translation because the overrides did not contain this key
+    // and the locale key is not supported.
     expect(thumbsUp).toHaveAttribute('aria-label', 'This answered my question');
     expect(thumbsDown).toHaveAttribute('aria-label', 'This did not answer my question');
 

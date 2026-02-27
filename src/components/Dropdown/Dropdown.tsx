@@ -51,7 +51,7 @@ export interface DropdownProps {
  * It provides multiple shared contexts, which are consumed by its child components,
  * and also registers some global event listeners.
  */
-export function Dropdown(props: PropsWithChildren<DropdownProps>): JSX.Element {
+export function Dropdown(props: PropsWithChildren<DropdownProps>): React.JSX.Element {
   const { t } = useTranslation();
   const {
     children,
@@ -67,6 +67,7 @@ export function Dropdown(props: PropsWithChildren<DropdownProps>): JSX.Element {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const screenReaderUUID = useId('dropdown');
+  const dropdownListUUID = useId('dropdown-list');
   const [screenReaderKey, setScreenReaderKey] = useState<number>(0);
   const [hasTyped, setHasTyped] = useState<boolean>(false);
   const [childrenWithDropdownItemsTransformed, items] = useMemo(() => {
@@ -92,6 +93,7 @@ export function Dropdown(props: PropsWithChildren<DropdownProps>): JSX.Element {
     focusedIndex,
     focusedItemData,
     screenReaderUUID,
+    dropdownListUUID,
     setHasTyped,
     onToggle,
     onSelect
@@ -110,7 +112,7 @@ export function Dropdown(props: PropsWithChildren<DropdownProps>): JSX.Element {
     setLastTypedOrSubmittedValue
   ]);
 
-  useRootClose(containerRef, () => {
+  useRootClose(containerRef as React.RefObject<Element>, () => {
     toggleDropdown(false);
   }, { disabled: !isActive });
 
@@ -136,23 +138,8 @@ export function Dropdown(props: PropsWithChildren<DropdownProps>): JSX.Element {
         updateFocusedItem(focusedIndex - 1);
       }
     } else if (e.key === 'Tab' && !e.shiftKey) {
-      if (items.length !== 0) {
-        if (focusedIndex >= items.length - 1) {
-          updateFocusedItem(-1);
-          toggleDropdown(false);
-        } else {
-          updateFocusedItem(focusedIndex + 1);
-          e.preventDefault();
-        }
-      }
-    } else if (e.key === 'Tab' && e.shiftKey) {
-      if (focusedIndex > 0 || (!alwaysSelectOption && focusedIndex === 0)) {
-        updateFocusedItem(focusedIndex - 1);
-        e.preventDefault();
-      } else {
-        updateFocusedItem(-1);
-        toggleDropdown(false);
-      }
+      updateFocusedItem(-1);
+      toggleDropdown(false);
     } else if (!hasTyped) {
       setHasTyped(true);
     }
@@ -257,6 +244,7 @@ function useDropdownContextInstance(
   index: number,
   focusedItemData: Record<string, unknown> | undefined,
   screenReaderUUID: string | undefined,
+  dropdownListUUID: string | undefined,
   setHasTyped: (hasTyped: boolean) => void,
   onToggle?: (
     isActive: boolean,
@@ -279,7 +267,8 @@ function useDropdownContextInstance(
     isActive,
     toggleDropdown,
     onSelect,
-    screenReaderUUID
+    screenReaderUUID,
+    dropdownListUUID
   };
 }
 
@@ -289,7 +278,7 @@ function getTransformedChildrenAndItemData(children: ReactNode): [ReactNode, Dro
     if (!(isValidElement(child) && child.type === DropdownItem)) {
       return child;
     }
-    const props: DropdownItemProps = child.props;
+    const props = child.props as DropdownItemProps;
     items.push({
       value: props.value,
       itemData: props.itemData

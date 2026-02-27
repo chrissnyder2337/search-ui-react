@@ -74,7 +74,7 @@ export function Geolocation({
   customCssClasses,
   useIconAsButton = false,
   disableBuiltInClasses = false
-}: GeolocationProps): JSX.Element | null {
+}: GeolocationProps): React.JSX.Element | null {
   const { t } = useTranslation();
   const cssClasses = useComposedCssClasses(builtInCssClasses, customCssClasses, disableBuiltInClasses);
   const [handleGeolocationClick, isFetchingUserLocation] = useGeolocationHandler({
@@ -107,6 +107,6 @@ export function Geolocation({
         </button>
         {iconContainer}
       </div>
-    )
+    );
   }
 }

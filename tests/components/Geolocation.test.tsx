@@ -98,7 +98,7 @@ const newGeoPosition: GeolocationPosition = {
     latitude: 40.741591687843005,
     longitude: -74.00530254443494,
     speed: null,
-    toJSON: function () {
+    toJSON: function() {
       return {
         accuracy: this.accuracy,
         altitude: this.altitude,
@@ -111,7 +111,7 @@ const newGeoPosition: GeolocationPosition = {
     },
   },
   timestamp: 0,
-  toJSON: function () {
+  toJSON: function() {
     return {
       coords: this.coords.toJSON(),
       timestamp: this.timestamp,
@@ -125,7 +125,7 @@ const newGeoPositionWithLowAccuracy: GeolocationPosition = {
     accuracy: 100000,
   },
   timestamp: 0,
-  toJSON: function () {
+  toJSON: function() {
     return {
       coords: this.coords.toJSON(),
       timestamp: this.timestamp,
@@ -181,7 +181,7 @@ describe('custom click handler', () => {
     const mockedHandleClickFn = jest.fn();
     render(<Geolocation handleClick={mockedHandleClickFn} />);
     await clickUpdateLocation();
-    
+
     expect(consoleWarnSpy).toBeCalledWith('mocked error!');
     expect(mockedHandleClickFn).not.toBeCalled();
   });

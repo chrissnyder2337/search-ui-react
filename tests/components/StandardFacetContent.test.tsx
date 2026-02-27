@@ -49,7 +49,7 @@ const mockStandardFacet = (props?: StandardFacetProps) => {
   return (
     <FacetsProvider>
       {facets => facets.map(facet => (
-        <StandardFacetContent {...props} fieldId={facet.fieldId} facet={facet}/>))}
+        <StandardFacetContent {...props} fieldId={facet.fieldId} facet={facet} key={facet.fieldId} />))}
     </FacetsProvider>);
 };
 
@@ -80,7 +80,7 @@ describe('StandardFacetContent', () => {
     expect(coffeeLabelAndCount).toBeNull();
   });
 
-  it('Clicking an unselected facet option label selects it', async() => {
+  it('Clicking an unselected facet option label selects it', async () => {
     const actions = spyOnActions();
     render(mockStandardFacet());
 
@@ -94,7 +94,7 @@ describe('StandardFacetContent', () => {
     expectFacetOptionSet(actions, standardFacet.fieldId, coffeeFacetOption, true);
   });
 
-  it('Clicking a selected facet option checkbox unselects it', async() => {
+  it('Clicking a selected facet option checkbox unselects it', async () => {
     const actions = spyOnActions();
     render(mockStandardFacet());
 

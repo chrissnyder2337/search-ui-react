@@ -63,7 +63,7 @@ describe('StandardFacets', () => {
     });
   });
 
-  it('Clicking an unselected facet option checkbox selects it', async  () => {
+  it('Clicking an unselected facet option checkbox selects it', async () => {
     const actions = spyOnActions();
     render(<StandardFacets />);
 

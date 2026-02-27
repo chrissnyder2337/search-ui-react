@@ -12,20 +12,21 @@ export function ScreenReader({
   instructions,
   announcementKey,
   announcementText,
-}: Props): JSX.Element | null {
+}: Props): React.JSX.Element | null {
 
   return (
     <>
       <div
         id={instructionsId}
-        className='hidden'
+        className='sr-only'
       >
         {instructions}
       </div>
       <div
         className='sr-only'
         key={announcementKey}
-        aria-live='assertive'
+        aria-live='polite'
+        aria-atomic='true'
       >
         {announcementText}
       </div>

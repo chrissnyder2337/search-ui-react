@@ -305,7 +305,7 @@ Renders results count of a universal/vertical search.
 </td></tr>
 <tr><td>
 
-[SearchBar({ placeholder, geolocationOptions, hideRecentSearches, visualAutocompleteConfig, showVerticalLinks, onSelectVerticalLink, verticalKeyToLabel, recentSearchesLimit, customCssClasses, onSearch })](./search-ui-react.searchbar.md)
+[SearchBar({ placeholder, geolocationOptions, hideRecentSearches, visualAutocompleteConfig, showVerticalLinks, onSelectVerticalLink, verticalKeyToLabel, recentSearchesLimit, universalAutocompleteLimit, verticalAutocompleteLimits, customCssClasses, onSearch, autocompleteDisabled })](./search-ui-react.searchbar.md)
 
 
 </td><td>
@@ -991,6 +991,28 @@ Props for [ResultsCount()](./search-ui-react.resultscount.md)<!-- -->.
 </td></tr>
 <tr><td>
 
+[SearchAnalyticsConfig](./search-ui-react.searchanalyticsconfig.md)
+
+
+</td><td>
+
+An interface representing the configuration for search analytics reporting.
+
+
+</td></tr>
+<tr><td>
+
+[SearchAnalyticsEventService](./search-ui-react.searchanalyticseventservice.md)
+
+
+</td><td>
+
+A service for reporting Yext Search analytics events
+
+
+</td></tr>
+<tr><td>
+
 [SearchBarCssClasses](./search-ui-react.searchbarcssclasses.md)
 
 
@@ -1550,3 +1572,4 @@ A map of verticalKey to a VerticalConfig.
 
 </td></tr>
 </tbody></table>
+

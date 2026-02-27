@@ -38,14 +38,14 @@ export function FeaturedSnippetDirectAnswer({
   result,
   readMoreClickHandler,
   cssClasses = {}
-}: FeaturedSnippetDirectAnswerProps): JSX.Element {
+}: FeaturedSnippetDirectAnswerProps): React.JSX.Element {
   const answer = result.fieldType === 'multi_line_text' && result.value;
   if (unsupportedTextFormats.includes(result.fieldType)) {
     console.warn('Rendering ' + result.fieldType + ' direct answer is currently not supported. ' +
         'You can modify your search configuration to convert ' + result.fieldType + ' to HTML to be rendered '
         + 'on the page.');
   }
-  let snippet: JSX.Element;
+  let snippet: React.JSX.Element;
   const snippetValue = useMemo(() =>
   { return { __html: result.snippet?.value }; }, [result.snippet?.value]);
 
@@ -60,6 +60,18 @@ export function FeaturedSnippetDirectAnswer({
   const link = result.relatedResult.link || result.relatedResult.rawData.landingPageUrl as string;
   const name = result.relatedResult.name;
 
+  const readMoreComponents = useMemo(() => ({
+    a: (
+      <a
+        className="text-primary"
+        href={link}
+        onClick={readMoreClickHandler}
+        aria-label={name}
+      />
+    )
+  }), [link, name, readMoreClickHandler]);
+  const readMoreValues = useMemo(() => ({ name }), [name]);
+
   return (
     <div className={cssClasses.answerContainer}>
       {answer &&
@@ -69,8 +81,8 @@ export function FeaturedSnippetDirectAnswer({
         {link && name && <div className='pt-4 text-neutral'>
           <Trans
             i18nKey='readMoreAbout'
-            components={{ a: <a className='text-primary' href={link} onClick={readMoreClickHandler} /> }}
-            values={{ name }}
+            components={readMoreComponents}
+            values={readMoreValues}
           />
         </div>}
       </div>
